@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel In Your Hand - Interactive Implementation Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 250px;
+            }
+        }
+
+        .nav-item.active {
+            background-color: #10b981;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .layer-card:hover .layer-details {
+            display: block;
+        }
+
+        .layer-details {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-view {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        .section-view.active {
+            display: block;
+        }
+
+        /* <!-- Chosen Palette: Tech Emerald Light. Background: Slate 50 (f8fafc), Surface: White, Primary: Emerald 500 (10b981), Text: Slate 900 (0f172a) & Slate 500. --> */
+        /* <!-- Application Structure Plan: The SPA uses a dashboard structure with a left-side navigation panel and a main content area. This allows users to non-linearly explore the strategic pillars of the 'Travel In Your Hand' pitch: Overview (Problem/Solution & core KPIs), Architecture (the 4-layer technical stack), Financials (funding & unit economics), Roadmap (scaling phases), and Team (Stakeholders). This logical separation prevents information overload and caters to different investor/stakeholder interests (e.g., a CTO can jump to Architecture, a CFO to Financials). --> */
+        /* <!-- Visualization & Content Choices: 
+            Overview -> Goal: Inform -> Dynamic KPI cards -> Highlights key metrics (LTV/CAC, Margin) immediately.
+            Architecture -> Goal: Organize/Relationships -> Interactive Stacked Divs -> Hovering reveals technical details for each layer, showing how AI sits between users and operators without using complex SVGs.
+            Financials -> Goal: Compare/Inform -> Bar Chart & Doughnut Chart (Chart.js) -> Bar chart clearly compares 3-year funding needs; Doughnut contrasts CAC vs LTV.
+            Roadmap -> Goal: Change/Timeline -> CSS Timeline -> Shows the geographic expansion strategy chronologically.
+            Team -> Goal: Organize -> CSS Grid Cards -> Presents the exact stakeholder matrix from the source document cleanly. 
+            All visualizations use Canvas (Chart.js) or HTML/CSS. --> */
+        /* <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. --> */
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex h-full shadow-sm z-10">
+        <div class="p-6 border-b border-slate-100">
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Travel<span class="text-emerald-500">.</span></h1>
+            <p class="text-xs text-slate-500 font-medium tracking-widest uppercase mt-1">In Your Hand</p>
+        </div>
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="desktop-nav">
+            <button data-target="overview" class="nav-item active w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                <span class="text-lg">&#128200;</span> Ringkasan Eksekutif
+            </button>
+            <button data-target="architecture" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                <span class="text-lg">&#128187;</span> Arsitektur Sistem
+            </button>
+            <button data-target="financials" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                <span class="text-lg">&#128184;</span> Keuangan & Pasar
+            </button>
+            <button data-target="roadmap" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                <span class="text-lg">&#128640;</span> Peta Jalan Ekspansi
+            </button>
+            <button data-target="team" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                <span class="text-lg">&#128101;</span> Tim & Stakeholder
+            </button>
+        </nav>
+        <div class="p-4 border-t border-slate-100 bg-slate-50">
+            <p class="text-xs text-slate-500 text-center">Vision 2028 Implementation</p>
+        </div>
+    </aside>
+
+    <div class="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center fixed top-0 w-full z-20 shadow-sm">
+        <h1 class="text-xl font-bold text-slate-900">Travel<span class="text-emerald-500">.</span></h1>
+        <select id="mobile-nav" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none">
+            <option value="overview">Ringkasan Eksekutif</option>
+            <option value="architecture">Arsitektur Sistem</option>
+            <option value="financials">Keuangan & Pasar</option>
+            <option value="roadmap">Peta Jalan Ekspansi</option>
+            <option value="team">Tim & Stakeholder</option>
+        </select>
+    </div>
+
+    <main class="flex-1 h-full overflow-y-auto bg-slate-50 pt-16 md:pt-0 pb-12">
+        
+        <div id="overview" class="section-view active p-6 md:p-10 max-w-6xl mx-auto">
+            <div class="mb-10">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">Ringkasan Eksekutif</h2>
+                <p class="text-slate-600 text-lg leading-relaxed max-w-3xl">Bagian ini merangkum visi strategis, masalah industri saat ini, dan solusi berbasis AI yang ditawarkan. Travel In Your Hand bertujuan menjadi lapisan cerdas yang terintegrasi langsung dengan ekosistem operator pariwisata, bukan sekadar Online Travel Agent (OTA) biasa.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="text-rose-500">&#9888;</span> Masalah Industri</h3>
+                    <ul class="space-y-3 text-slate-600">
+                        <li class="flex gap-3"><span class="text-slate-300">&#9654;</span> Perencanaan perjalanan saat ini sangat terfragmentasi di berbagai aplikasi.</li>
+                        <li class="flex gap-3"><span class="text-slate-300">&#9654;</span> OTA lebih fokus pada konversi pemesanan (booking) dibandingkan pengalaman siklus hidup pengguna.</li>
+                        <li class="flex gap-3"><span class="text-slate-300">&#9654;</span> Personalisasi yang rendah menyebabkan loyalitas pelanggan yang lemah.</li>
+                        <li class="flex gap-3"><span class="text-slate-300">&#9654;</span> Tidak ada algoritma cerdas untuk mengelompokkan paket premium, korporat, atau backpacker.</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-emerald-500 p-8 rounded-2xl shadow-sm text-white relative overflow-hidden">
+                    <div class="absolute -right-10 -top-10 text-emerald-400 opacity-20 text-9xl">&#9881;</div>
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2 relative z-10"><span class="text-emerald-100">&#10004;</span> Solusi AI Strategis</h3>
+                    <ul class="space-y-3 text-emerald-50 relative z-10">
+                        <li class="flex gap-3"><span>&#10003;</span> <strong>AI Layer:</strong> Meningkatkan kemampuan operator perjalanan yang sudah ada tanpa bersaing langsung dengan OTA.</li>
+                        <li class="flex gap-3"><span>&#10003;</span> <strong>Integrasi API:</strong> Penghubung mulus antara inventaris maskapai/hotel dengan pengguna.</li>
+                        <li class="flex gap-3"><span>&#10003;</span> <strong>Peningkatan Nilai:</strong> Target peningkatan retensi sebesar 12-18% dan ekspansi ARPU sebesar 8-15%.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-bold text-slate-800 mb-6">Sorotan Unit Ekonomi & Metrik</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm text-center">
+                    <p class="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-2">LTV / CAC Ratio</p>
+                    <p class="text-4xl font-bold text-emerald-500">7.7x</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm text-center">
+                    <p class="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-2">Gross Margin</p>
+                    <p class="text-4xl font-bold text-slate-800">45%+</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm text-center">
+                    <p class="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-2">Break-Even</p>
+                    <p class="text-4xl font-bold text-slate-800">Bulan 20</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm text-center">
+                    <p class="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-2">Runway</p>
+                    <p class="text-4xl font-bold text-slate-800">~22 Bln</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="architecture" class="section-view p-6 md:p-10 max-w-6xl mx-auto">
+            <div class="mb-10">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">Arsitektur Sistem (Platform Core)</h2>
+                <p class="text-slate-600 text-lg leading-relaxed max-w-3xl">Bagian ini memvisualisasikan arsitektur teknis 4 lapis. Platform ini menggabungkan penemuan perjalanan, kecerdasan buatan, konektivitas fintech, dan sistem inventaris operator menjadi satu ekosistem yang kohesif. Silakan arahkan kursor (hover) pada setiap lapisan untuk melihat modul inti yang beroperasi di dalamnya.</p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-10">
+                <div class="w-full lg:w-1/2 flex flex-col justify-center space-y-4">
+                    
+                    <div class="layer-card group bg-blue-50 border-2 border-blue-200 rounded-xl p-5 cursor-pointer transition-all hover:bg-blue-100 hover:shadow-md">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-blue-800 text-lg">1. User App Layer</h4>
+                            <span class="text-blue-500 text-2xl">&#128241;</span>
+                        </div>
+                        <p class="text-blue-600 text-sm mt-1">Antarmuka pencarian, pemesanan, dan manajemen perjalanan (React/Flutter).</p>
+                        <div class="layer-details mt-4 pt-4 border-t border-blue-200">
+                            <ul class="text-sm text-blue-700 space-y-1">
+                                <li>&#8226; Travel Discovery & Planning (Pencarian AI)</li>
+                                <li>&#8226; Travel Wallet Orchestration</li>
+                                <li>&#8226; Mobile / Web Platforms</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="layer-card group bg-purple-50 border-2 border-purple-200 rounded-xl p-5 cursor-pointer transition-all hover:bg-purple-100 hover:shadow-md">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-purple-800 text-lg">2. AI Personalization Engine</h4>
+                            <span class="text-purple-500 text-2xl">&#129504;</span>
+                        </div>
+                        <p class="text-purple-600 text-sm mt-1">Rekomendasi, personalisasi, dan kecerdasan penetapan harga (Python ML Stack).</p>
+                        <div class="layer-details mt-4 pt-4 border-t border-purple-200">
+                            <ul class="text-sm text-purple-700 space-y-1">
+                                <li>&#8226; Behavioral Clustering</li>
+                                <li>&#8226; Itinerary Optimization & Builder</li>
+                                <li>&#8226; Dynamic Pricing Models</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="layer-card group bg-emerald-50 border-2 border-emerald-200 rounded-xl p-5 cursor-pointer transition-all hover:bg-emerald-100 hover:shadow-md">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-emerald-800 text-lg">3. Integration API Layer</h4>
+                            <span class="text-emerald-500 text-2xl">&#128268;</span>
+                        </div>
+                        <p class="text-emerald-600 text-sm mt-1">Menghubungkan operator perjalanan dan sistem pembayaran/fintech.</p>
+                        <div class="layer-details mt-4 pt-4 border-t border-emerald-200">
+                            <ul class="text-sm text-emerald-700 space-y-1">
+                                <li>&#8226; Flight & Hotel APIs Synchronization</li>
+                                <li>&#8226; Payment Gateway & Wallet Services</li>
+                                <li>&#8226; Loyalty Programs Integration</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="layer-card group bg-orange-50 border-2 border-orange-200 rounded-xl p-5 cursor-pointer transition-all hover:bg-orange-100 hover:shadow-md">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-orange-800 text-lg">4. Travel Operator Systems</h4>
+                            <span class="text-orange-500 text-2xl">&#127976;</span>
+                        </div>
+                        <p class="text-orange-600 text-sm mt-1">Sistem pemesanan, inventaris, dan harga dari penyedia akhir.</p>
+                        <div class="layer-details mt-4 pt-4 border-t border-orange-200">
+                            <ul class="text-sm text-orange-700 space-y-1">
+                                <li>&#8226; Airlines Systems</li>
+                                <li>&#8226; Hotels & Accommodation</li>
+                                <li>&#8226; Transport & Local Experience Providers</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-full lg:w-1/2 bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <h3 class="text-xl font-bold text-slate-800 mb-6 text-center">Pusat Ekosistem Platform</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-lg text-center border border-slate-100">
+                            <div class="text-3xl mb-2">&#128269;</div>
+                            <h4 class="font-bold text-slate-700">Experience Hub</h4>
+                            <p class="text-xs text-slate-500 mt-1">Discovery, perencana jadwal, dan pelacakan harga.</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-lg text-center border border-slate-100">
+                            <div class="text-3xl mb-2">&#128202;</div>
+                            <h4 class="font-bold text-slate-700">Intelligence Hub</h4>
+                            <p class="text-xs text-slate-500 mt-1">Mesin rekomendasi dan orkestrasi Fintech.</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-lg text-center border border-slate-100 col-span-2">
+                            <div class="text-3xl mb-2">&#127760;</div>
+                            <h4 class="font-bold text-slate-700">Ecosystem Hub</h4>
+                            <p class="text-xs text-slate-500 mt-1">Integrasi real-time dengan maskapai, hotel, asuransi, dan gateway pembayaran.</p>
+                        </div>
+                    </div>
+                    <div class="mt-8 p-4 bg-slate-800 text-white rounded-xl">
+                        <p class="text-sm text-center font-medium">Arsitektur ini memastikan pengalaman perjalanan terintegrasi, real-time, dan dipersonalisasi.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="financials" class="section-view p-6 md:p-10 max-w-6xl mx-auto">
+            <div class="mb-10">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">Keuangan & Pasar</h2>
+                <p class="text-slate-600 text-lg leading-relaxed max-w-3xl">Bagian ini merinci proyeksi kebutuhan pendanaan, alokasi investasi, dan efisiensi unit ekonomi (Unit Economics). Grafik interaktif memvisualisasikan kebutuhan modal dari Tahun ke-1 hingga Tahun ke-3, serta perbandingan metrik kinerja utama.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Kebutuhan Pendanaan Bertahap</h3>
+                    <p class="text-sm text-slate-500 mb-6">Proyeksi modal untuk fase validasi hingga skala regional Asia Tenggara.</p>
+                    <div class="flex-1 w-full flex items-center justify-center">
+                        <div class="chart-container">
+                            <canvas id="fundingChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-between items-center text-sm border-t border-slate-100 pt-4">
+                        <span class="font-medium text-slate-600">Total Capital Req: $700 MM</span>
+                        <span class="font-medium text-slate-600">Funding Req: $550 MM</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Efisiensi Unit Ekonomi</h3>
+                        <div class="flex items-center gap-6">
+                            <div class="w-1/2">
+                                <div class="chart-container" style="height: 180px;">
+                                    <canvas id="cacLtvChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="w-1/2 space-y-3">
+                                <div class="flex justify-between border-b border-slate-100 pb-2">
+                                    <span class="text-slate-500">CAC</span>
+                                    <span class="font-bold text-slate-800">$8</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-100 pb-2">
+                                    <span class="text-slate-500">Blended LTV</span>
+                                    <span class="font-bold text-emerald-500">$62</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-100 pb-2">
+                                    <span class="text-slate-500">Payback Period</span>
+                                    <span class="font-bold text-slate-800">4-6 Bulan</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Annual Comm/User</span>
+                                    <span class="font-bold text-slate-800">$28</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Burn Rate vs Runway</h3>
+                        <div class="flex justify-between items-end mb-2">
+                            <div>
+                                <p class="text-xs text-slate-500 uppercase tracking-wide">Monthly Burn</p>
+                                <p class="text-2xl font-bold text-rose-500">$40K</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-slate-500 uppercase tracking-wide">Current Runway</p>
+                                <p class="text-2xl font-bold text-emerald-500">~22 Bulan</p>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden flex">
+                            <div class="bg-emerald-500 h-3" style="width: 80%"></div>
+                            <div class="bg-rose-400 h-3" style="width: 20%"></div>
+                        </div>
+                        <p class="text-xs text-slate-500 text-center">Mencapai Break-even pada Bulan ke-20</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="roadmap" class="section-view p-6 md:p-10 max-w-6xl mx-auto">
+            <div class="mb-10">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">Peta Jalan Ekspansi (Scaling Strategy)</h2>
+                <p class="text-slate-600 text-lg leading-relaxed max-w-3xl">Bagian ini menampilkan strategi ekspansi bertahap (gradual regional expansion) dari tahun 2026 hingga 2028. Dimulai dengan validasi produk MVP di pasar Indonesia, dilanjutkan dengan ekspansi regional, dan berakhir pada skala platform tingkat Asia Tenggara.</p>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="relative border-l-4 border-emerald-100 ml-6 space-y-12 pb-8">
+                    
+                    <div class="relative">
+                        <div class="absolute -left-[43px] bg-emerald-500 text-white w-20 py-1 rounded-full text-center text-sm font-bold shadow-md">2026</div>
+                        <div class="pl-10">
+                            <h3 class="text-xl font-bold text-slate-800">Fase 1: Indonesia (Product Validation)</h3>
+                            <p class="text-slate-500 mt-2 mb-4">Fokus implementasi awal pada pasar Indonesia dengan total potensi >$20B. Penekanan pada Research & Prototype dan MVP Development.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                    <h4 class="font-bold text-sm text-slate-700 mb-2 flex items-center gap-2"><span class="text-emerald-500">&#9679;</span> MVP Scope</h4>
+                                    <ul class="text-sm text-slate-600 space-y-1">
+                                        <li>1. AI Itinerary builder & Planning</li>
+                                        <li>2. Inventory API & Synchronization</li>
+                                        <li>3. Price alerts & Monitoring</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                    <h4 class="font-bold text-sm text-slate-700 mb-2 flex items-center gap-2"><span class="text-blue-500">&#9679;</span> Key Activities</h4>
+                                    <ul class="text-sm text-slate-600 space-y-1">
+                                        <li>User behavior tracking</li>
+                                        <li>Initial release & Beta Testing (1,000 user beta)</li>
+                                        <li>First operator integration</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="absolute -left-[43px] bg-blue-500 text-white w-20 py-1 rounded-full text-center text-sm font-bold shadow-md">2027</div>
+                        <div class="pl-10">
+                            <h3 class="text-xl font-bold text-slate-800">Fase 2: Singapore & Malaysia (Regional Expansion)</h3>
+                            <p class="text-slate-500 mt-2">Memperluas jangkauan melalui integrasi operator lintas negara. Mencapai penetrasi fitur berlangganan >15%.</p>
+                            <div class="mt-3 inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium border border-blue-100">Target User: Urban digital travelers 20-35</div>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="absolute -left-[43px] bg-purple-500 text-white w-20 py-1 rounded-full text-center text-sm font-bold shadow-md">2028</div>
+                        <div class="pl-10">
+                            <h3 class="text-xl font-bold text-slate-800">Fase 3: Southeast Asia (Platform Scale)</h3>
+                            <p class="text-slate-500 mt-2">Skalabilitas penuh ekosistem AI pariwisata terintegrasi. Kesiapan pendanaan Series A. Lifecycle pariwisata End-to-End.</p>
+                            <div class="mt-4 flex gap-4">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-400 uppercase">Tech Stack Scale</span>
+                                    <span class="font-semibold text-slate-700">AWS/GCP Cloud</span>
+                                </div>
+                                <div class="flex flex-col border-l border-slate-200 pl-4">
+                                    <span class="text-xs text-slate-400 uppercase">Compliance</span>
+                                    <span class="font-semibold text-slate-700">PDP / ISO Standards</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div id="team" class="section-view p-6 md:p-10 max-w-6xl mx-auto">
+            <div class="mb-10">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">Tim & Pemangku Kepentingan</h2>
+                <p class="text-slate-600 text-lg leading-relaxed max-w-3xl">Daftar ini membagi peran berdasarkan struktur organisasi startup teknologi modern untuk memastikan eksekusi visi 2028 yang efisien dan akuntabel, dari pengembangan AI hingga kepatuhan hukum.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="stakeholder-grid">
+                <!-- Data populated by JS -->
+            </div>
+            
+            <div class="mt-10 bg-emerald-50 border border-emerald-200 p-6 rounded-xl flex gap-4 items-start">
+                <div class="text-2xl text-emerald-500">&#128161;</div>
+                <div>
+                    <h4 class="font-bold text-emerald-800">Catatan Strategis</h4>
+                    <p class="text-emerald-700 text-sm mt-1">Setiap stakeholder memiliki peran krusial dalam menjaga Runway 12 bulan pertama tetap aman dan mencapai target Break-even di bulan ke-20. Koordinasi harian antar Squad sangat penting.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // State Management
+        const state = {
+            currentView: 'overview',
+            chartsInitialized: false
+        };
+
+        // Data Storage
+        const stakeholders = [
+            { name: "Milzon", role: "AI Travel Platform Architect", tasks: ["Memimpin visi teknis dan arsitektur sistem.", "Mendesain integrasi AI dengan API Operator.", "Mengawasi roadmap produk Visi 2028."] },
+            { name: "Investor Lead (TBA)", role: "Investment Director", tasks: ["Menyediakan pendanaan bertahap (Y1: $400K).", "Review performa bulanan (LTV/CAC).", "Membuka akses jaringan korporasi."] },
+            { name: "Product Manager", role: "Senior Product Manager", tasks: ["Menyusun spek teknis MVP (AI Itinerary).", "Riset pasar dan wawancara pengguna.", "Mengelola backlog dan prioritas fitur."] },
+            { name: "AI/ML Engineer", role: "Machine Learning Specialist", tasks: ["Membangun model Behavioral Clustering.", "Melatih algoritma prediksi harga.", "Implementasi stack ML berbasis Python."] },
+            { name: "Platform Engineer", role: "Backend & Cloud Engineer", tasks: ["Membangun Integration API Layer.", "Infrastruktur cloud & keamanan data.", "Pengembangan core Travel Wallet."] },
+            { name: "Growth Lead", role: "Growth Marketing Manager", tasks: ["Eksekusi strategi akuisisi (Target 50K).", "Memantau retensi (D30) & konversi.", "Mengelola kampanye komunitas."] },
+            { name: "Legal Counsel", role: "Regulatory & Compliance Officer", tasks: ["Kepatuhan PDP (Privasi Data).", "Lisensi pariwisata regional (ID, SG, MY).", "Menyusun kontrak operator."] },
+            { name: "Advisory Board", role: "Travel Industry Veteran", tasks: ["Arahan tren industri pariwisata global.", "Kemitraan dengan operator besar.", "Nasihat mitigasi risiko bisnis."] }
+        ];
+
+        // Core Interaction Handling
+        document.addEventListener('DOMContentLoaded', () => {
+            initNavigation();
+            renderStakeholders();
+            
+            // Show default view
+            document.getElementById('overview').classList.add('active');
+        });
+
+        // Functional Navigation
+        function initNavigation() {
+            const navButtons = document.querySelectorAll('#desktop-nav button');
+            const mobileSelect = document.getElementById('mobile-nav');
+
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const target = e.currentTarget.getAttribute('data-target');
+                    switchView(target);
+                    mobileSelect.value = target; // Sync mobile
+                });
+            });
+
+            mobileSelect.addEventListener('change', (e) => {
+                switchView(e.target.value);
+            });
+        }
+
+        function switchView(targetId) {
+            // Update state
+            state.currentView = targetId;
+
+            // Update UI buttons
+            document.querySelectorAll('#desktop-nav button').forEach(btn => {
+                if (btn.getAttribute('data-target') === targetId) {
+                    btn.classList.add('active');
+                    btn.classList.replace('text-slate-600', 'text-white');
+                    btn.classList.replace('hover:bg-slate-50', 'hover:bg-emerald-600');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.replace('text-white', 'text-slate-600');
+                    btn.classList.replace('hover:bg-emerald-600', 'hover:bg-slate-50');
+                }
+            });
+
+            // Hide all sections
+            document.querySelectorAll('.section-view').forEach(sec => {
+                sec.classList.remove('active');
+            });
+
+            // Show target section
+            document.getElementById(targetId).classList.add('active');
+
+            // Lazy load charts to ensure container dimensions are correct when drawn
+            if (targetId === 'financials' && !state.chartsInitialized) {
+                initCharts();
+                state.chartsInitialized = true;
+            }
+        }
+
+        // Render Data into DOM
+        function renderStakeholders() {
+            const grid = document.getElementById('stakeholder-grid');
+            grid.innerHTML = stakeholders.map(person => `
+                <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-4">
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg">
+                            ${person.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">${person.name}</h4>
+                            <p class="text-xs text-emerald-600 font-medium uppercase tracking-wide">${person.role}</p>
+                        </div>
+                    </div>
+                    <ul class="text-sm text-slate-600 space-y-2">
+                        ${person.tasks.map(task => `<li class="flex items-start gap-2"><span class="text-slate-300 mt-0.5">&#9654;</span> <span>${task}</span></li>`).join('')}
+                    </ul>
+                </div>
+            `).join('');
+        }
+
+        // Initialize Chart.js
+        function initCharts() {
+            // 1. Funding Bar Chart
+            const ctxFunding = document.getElementById('fundingChart').getContext('2d');
+            new Chart(ctxFunding, {
+                type: 'bar',
+                data: {
+                    labels: ['Year 1 (ID)', 'Year 2 (SG/MY)', 'Year 3 (SEA)'],
+                    datasets: [{
+                        label: 'Kebutuhan Pendanaan ($ Juta)',
+                        data: [0.4, 1.5, 4.0],
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' $' + context.parsed.y + ' Juta';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [4, 4], color: '#e2e8f0' },
+                            ticks: { callback: function(value) { return '$' + value + 'M'; } }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // 2. Unit Economics Doughnut (CAC vs Margin representation)
+            const ctxCac = document.getElementById('cacLtvChart').getContext('2d');
+            new Chart(ctxCac, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Cost of Acquisition ($8)', 'Value Margin ($54)'],
+                    datasets: [{
+                        data: [8, 54], // 62 LTV - 8 CAC = 54 Value created per user
+                        backgroundColor: ['#f43f5e', '#10b981'],
+                        borderWidth: 0,
+                        cutout: '75%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    }
+                },
+                plugins: [{
+                    id: 'textCenter',
+                    beforeDraw: function(chart) {
+                        var width = chart.width, height = chart.height, ctx = chart.ctx;
+                        ctx.restore();
+                        var fontSize = (height / 114).toFixed(2);
+                        ctx.font = "bold " + fontSize + "em sans-serif";
+                        ctx.textBaseline = "middle";
+                        ctx.fillStyle = "#0f172a";
+                        var text = "7.7x", textX = Math.round((width - ctx.measureText(text).width) / 2), textY = height / 2;
+                        ctx.fillText(text, textX, textY);
+                        ctx.save();
+                    }
+                }]
+            });
+        }
+    </script>
+</body>
+</html>
